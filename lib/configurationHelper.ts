@@ -39,29 +39,24 @@ export function EnvironmentVariable(environmentVariable: string) {
  * Yet, call the init() method once to load the configuration
  */
 export abstract class EnvironmentConfiguration {
-    async init() {
-        return new Promise<void>((resolve, reject) => {
-            const errors = new Array();
-
-            const configurationVariables = ConfigurationVariables.get(this);
-            for (const [property, info] of configurationVariables) {
-                if (!process.env[info.environmentVariable]) {
-                    errors.push(`Environment variable ${info.environmentVariable} is not properly defined`);
+    init() {
+        const errors = new Array();
+        const configurationVariables = ConfigurationVariables.get(this);
+        for (const [property, info] of configurationVariables) {
+            if (!process.env[info.environmentVariable]) {
+                errors.push(`Environment variable ${info.environmentVariable} is not properly defined`);
+            } else {
+                const value = info.type(process.env[info.environmentVariable]); // Cast into correct type
+                if (isNaN(value) && info.type.name === 'Number') {
+                    errors.push(`Unable to parse ${process.env[info.environmentVariable]} to number`);
                 } else {
-                    const value = info.type(process.env[info.environmentVariable]); // Cast into correct type
-                    if (isNaN(value) && info.type.name === 'Number') {
-                        errors.push(`Unable to parse ${process.env[info.environmentVariable]} to number`);
-                    } else {
-                        this[property] = value;
-                    }
+                    this[property] = value;
                 }
             }
+        }
 
-            if (errors.length > 0) {
-                reject(errors.join('\n'));
-            } else {
-                resolve();
-            }
-        });
+        if (errors.length > 0) {
+            throw new Error(errors.join('\n'));
+        }
     }
 }
